@@ -26,8 +26,8 @@ ELO_FILE = PROCESSED_DIR / "elo_ratings.jsonl"
 
 K_FACTOR = 32
 INITIAL_ELO = 1500
-TOP_N_FOR_TOURNAMENT = 25
-COMPARISONS_PER_IDEA = 4
+TOP_N_FOR_TOURNAMENT = 100  # Расширено: было 25
+COMPARISONS_PER_IDEA = 8     # Расширено: было 4
 
 
 class ComparisonResult(BaseModel):
@@ -132,7 +132,8 @@ def main():
         console.print("[yellow]No scores found. Run step 06 first.[/yellow]")
         return
     
-    passed = [s for s in scores if s.score_solo_start >= 5 and s.score_community_6m >= 4]
+    # Мягкий фильтр: минимум 25 баллов
+    passed = [s for s in scores if s.total_score >= 25]
     passed.sort(key=lambda s: s.total_score, reverse=True)
     
     top_scores = passed[:TOP_N_FOR_TOURNAMENT]
