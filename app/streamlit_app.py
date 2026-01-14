@@ -165,15 +165,19 @@ python -m bioideas.pipeline.s02_embed_chunks
                             st.markdown(f"- [{nugget.kind}] {nugget.text_ru}")
     
     with tab2:
-        # Создаём DataFrame с idea_id для выбора
+        # Создаём данные с номерами
         data = []
-        ideas_by_title = {}
-        for idea in filtered_ideas:
+        ideas_by_num = {}  # {номер: idea}
+        ideas_list = []    # [(номер, title, idea)]
+        
+        for idx, idea in enumerate(filtered_ideas, start=1):
             score = scores_map.get(idea.idea_id)
             elo = elo_map.get(idea.idea_id)
             title_short = idea.title_ru[:60]
-            ideas_by_title[title_short] = idea
+            ideas_by_num[idx] = idea
+            ideas_list.append((idx, title_short, idea))
             data.append({
+                "#": idx,
                 "Title": title_short,
                 "Category": idea.category,
                 "Horizon": idea.horizon,
@@ -186,15 +190,57 @@ python -m bioideas.pipeline.s02_embed_chunks
         
         df = pd.DataFrame(data)
         
-        # Выбор идеи для детального просмотра
-        selected_title = st.selectbox(
-            "Выберите идею для детального просмотра:",
-            options=[""] + list(ideas_by_title.keys()),
-            format_func=lambda x: "-- Выберите идею --" if x == "" else x
-        )
+        # Поиск идеи
+        st.markdown("### 🔍 Поиск идеи")
+        col_num, col_search = st.columns([1, 3])
         
-        if selected_title and selected_title in ideas_by_title:
-            idea = ideas_by_title[selected_title]
+        with col_num:
+            idea_num = st.number_input(
+                "По номеру (#)", 
+                min_value=0, 
+                max_value=len(filtered_ideas), 
+                value=0,
+                help="Введите номер идеи из таблицы"
+            )
+        
+        with col_search:
+            search_query = st.text_input(
+                "Поиск по тексту",
+                placeholder="Введите ключевые слова для поиска...",
+                help="Поиск по названию идеи"
+            )
+        
+        # Определяем выбранную идею
+        selected_idea = None
+        
+        # Приоритет: номер > текстовый поиск
+        if idea_num > 0 and idea_num in ideas_by_num:
+            selected_idea = ideas_by_num[idea_num]
+        elif search_query:
+            # Фильтруем идеи по поисковому запросу
+            query_lower = search_query.lower()
+            matching = [(num, title, idea) for num, title, idea in ideas_list 
+                       if query_lower in title.lower() or query_lower in idea.title_ru.lower()]
+            
+            if matching:
+                # Показываем выпадающий список с результатами
+                options = [""] + [f"#{num}: {title}" for num, title, idea in matching]
+                selected_option = st.selectbox(
+                    f"Найдено {len(matching)} идей — выберите:",
+                    options=options,
+                    format_func=lambda x: "-- Выберите из результатов --" if x == "" else x
+                )
+                
+                if selected_option:
+                    # Извлекаем номер из выбранной опции
+                    selected_num = int(selected_option.split(":")[0].replace("#", ""))
+                    selected_idea = ideas_by_num.get(selected_num)
+            else:
+                st.warning(f"Ничего не найдено по запросу: «{search_query}»")
+        
+        # Показываем детали выбранной идеи
+        if selected_idea:
+            idea = selected_idea
             score = scores_map.get(idea.idea_id)
             elo = elo_map.get(idea.idea_id)
             
