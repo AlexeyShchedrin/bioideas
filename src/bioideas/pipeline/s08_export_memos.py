@@ -20,7 +20,7 @@ SCORES_FILE = PROCESSED_DIR / "scores.jsonl"
 ELO_FILE = PROCESSED_DIR / "elo_ratings.jsonl"
 NUGGETS_FILE = PROCESSED_DIR / "nuggets.jsonl"
 
-TOP_N_MEMOS = 5
+TOP_N_MEMOS = 10  # Расширено: было 5
 
 SYSTEM_PROMPT = """Ты венчурный аналитик. Напиши краткий decision memo для инвестиционного комитета.
 

@@ -113,7 +113,15 @@ python -m bioideas.pipeline.s02_embed_chunks
     tab1, tab2, tab3 = st.tabs(["📋 Список", "📊 Таблица", "📄 Memos"])
     
     with tab1:
-        for i, idea in enumerate(filtered_ideas[:50]):
+        # Пагинация для списка
+        items_per_page = 50
+        total_pages = max(1, (len(filtered_ideas) + items_per_page - 1) // items_per_page)
+        page = st.number_input("Страница", min_value=1, max_value=total_pages, value=1, key="list_page")
+        start_idx = (page - 1) * items_per_page
+        end_idx = min(start_idx + items_per_page, len(filtered_ideas))
+        st.caption(f"Показаны {start_idx+1}-{end_idx} из {len(filtered_ideas)} идей")
+        
+        for i, idea in enumerate(filtered_ideas[start_idx:end_idx], start=start_idx):
             score = scores_map.get(idea.idea_id)
             elo = elo_map.get(idea.idea_id)
             
@@ -157,12 +165,16 @@ python -m bioideas.pipeline.s02_embed_chunks
                             st.markdown(f"- [{nugget.kind}] {nugget.text_ru}")
     
     with tab2:
+        # Создаём DataFrame с idea_id для выбора
         data = []
+        ideas_by_title = {}
         for idea in filtered_ideas:
             score = scores_map.get(idea.idea_id)
             elo = elo_map.get(idea.idea_id)
+            title_short = idea.title_ru[:60]
+            ideas_by_title[title_short] = idea
             data.append({
-                "Title": idea.title_ru[:50],
+                "Title": title_short,
                 "Category": idea.category,
                 "Horizon": idea.horizon,
                 "Total": score.total_score if score else 0,
@@ -173,7 +185,43 @@ python -m bioideas.pipeline.s02_embed_chunks
             })
         
         df = pd.DataFrame(data)
-        st.dataframe(df, use_container_width=True, height=600)
+        
+        # Выбор идеи для детального просмотра
+        selected_title = st.selectbox(
+            "Выберите идею для детального просмотра:",
+            options=[""] + list(ideas_by_title.keys()),
+            format_func=lambda x: "-- Выберите идею --" if x == "" else x
+        )
+        
+        if selected_title and selected_title in ideas_by_title:
+            idea = ideas_by_title[selected_title]
+            score = scores_map.get(idea.idea_id)
+            elo = elo_map.get(idea.idea_id)
+            
+            st.markdown("---")
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                st.subheader(idea.title_ru)
+                st.markdown(f"**{idea.one_liner_ru}**")
+                st.markdown(f"**Проблема:** {idea.problem_ru}")
+                st.markdown(f"**Решение:** {idea.solution_ru}")
+                st.markdown(f"**Wedge:** {idea.wedge_ru}")
+                st.markdown(f"**MVP (3-6m):** {idea.mvp_3_6m_ru}")
+                st.markdown(f"**Community Hook:** {idea.community_hook_ru}")
+                st.markdown(f"**Монетизация:** {idea.early_monetization_ru}")
+                st.markdown(f"**Покупатели:** {', '.join(idea.acquirer_types_ru)}")
+                st.markdown(f"**Риски:** {', '.join(idea.key_risks_ru)}")
+            with col2:
+                if score:
+                    st.metric("Общий балл", f"{score.total_score}/50")
+                    st.progress(score.score_solo_start / 10, text=f"Solo: {score.score_solo_start}")
+                    st.progress(score.score_community_6m / 10, text=f"Community: {score.score_community_6m}")
+                    st.progress(score.score_blue_ocean / 10, text=f"Blue Ocean: {score.score_blue_ocean}")
+                if elo:
+                    st.metric("Elo", f"{elo.elo:.0f}", f"{elo.wins}W-{elo.losses}L")
+            st.markdown("---")
+        
+        st.dataframe(df, use_container_width=True, height=500)
     
     with tab3:
         st.markdown("### Decision Memos")
