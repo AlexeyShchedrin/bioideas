@@ -34,11 +34,9 @@ ENV/
 # Environment variables
 .env
 
-# Data (keep structure, ignore content)
+# Data (keep structure, ignore raw content)
 data/raw/*.txt
 data/raw/*.md
-data/processed/*.jsonl
-data/processed/memos/*.md
 
 # Keep .gitkeep files
 !data/raw/.gitkeep
