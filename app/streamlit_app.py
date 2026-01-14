@@ -31,11 +31,6 @@ def load_data():
     if not ideas_file.exists():
         ideas_file = PROCESSED_DIR / "ideas.jsonl"
     
-    # Debug: show paths
-    st.sidebar.text(f"Data dir: {PROCESSED_DIR}")
-    st.sidebar.text(f"Exists: {PROCESSED_DIR.exists()}")
-    st.sidebar.text(f"Files: {list(PROCESSED_DIR.glob('*.jsonl'))[:3]}")
-    
     ideas = read_jsonl(ideas_file, IdeaCard) if ideas_file.exists() else []
     scores = read_jsonl(PROCESSED_DIR / "scores.jsonl", ScoreCard)
     elo_ratings = read_jsonl(PROCESSED_DIR / "elo_ratings.jsonl", EloRating)
